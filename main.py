@@ -68,13 +68,18 @@ y_encoded = label_encoder.fit_transform(y)
 y_cat = to_categorical(y_encoded)
 
 # 3. Dzielimy dane na zestawy treningowe i testowe
-# 80% danych do treningu, 20% do testowania 
+# 80% danych do treningu, 20% do testowania (sprawdzania czy model dobrze przewiduje)
 # x_train - cechy audio, y_train - etykiety (poprawne odpowiedzi)
 # x_test - cechy audio, y_test - etykiety (poprawne odpowiedzi)
 X_train, X_test, y_train, y_test = train_test_split(X, y_cat, test_size=0.2, random_state=42)
 
 
 # 4. Tworzymy model sieci neuronowej
+# Sequential - model sekwencyjny, który składa się z warstw ułożonych jedna po drugiej
+# Flatten - spłaszcza dane wejściowe do jednego wymiaru
+# Dense - warstwa gęsta, która łączy wszystkie neurony z poprzednią warstwą
+# Dropout - warstwa, która losowo wyłącza neurony podczas treningu, aby zapobiec przeuczeniu (overfitting)
+
 model = Sequential([
     Flatten(input_shape=(MAX_LEN, N_MFCC)),
     Dense(256, activation='relu'),
@@ -84,12 +89,18 @@ model = Sequential([
     Dense(len(np.unique(y)), activation='softmax')
 ])
 
+# Adam optimizer do optymalizacji modelu
+# Categorical_crossentropy - funkcja straty do porównania etykiet (y) z przewidywaniami modelu
+# Metrics accuracy aby sprawdzić jak dobrze model przewiduje etykiety
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
 # 5. Trenujemy model na danych treningowych
+# parametry wybrane na podstawie prób i błędów
 early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
 history = model.fit(X_train, y_train, validation_split=0.2, epochs=50, batch_size=32, callbacks=[early_stop])
 
 # 6. Oceniamy celność modelu na danych testowych
+# test_loss - pokazuje jak pewny siebie jest model w przewidywaniu etykiet (im niższa wartość tym lepiej)
+# test_accuracy - dokładność modelu na danych testowych (im wyższa wartość tym lepiej)
 test_loss, test_accuracy = model.evaluate(X_test, y_test)
 print(f"Test accuracy: {test_accuracy:.4f}")
