@@ -8,6 +8,9 @@ from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Flatten
 from tensorflow.keras.callbacks import EarlyStopping
+import whisper
+
+model = whisper.load_model("base")
 
 # Krótki opis co sie dzieje:
 # 1. Wyciągamy cechy MFCC z audio.
@@ -21,8 +24,29 @@ from tensorflow.keras.callbacks import EarlyStopping
 
 directory_name = "data"
 SAMPLE_RATE = 16000
-MAX_LEN = 130  # Max length of MFCC feature vectors
-N_MFCC = 13    # Number of MFCCs
+N_MFCC = 13    # Number of MFCCs # Tutaj może być 13, 20, 40 
+
+# Dostosowanie parametrów do danych
+
+# Obliczenie MAX_LEN
+# mfcc_lengths = []
+# for author in os.listdir(directory_name):
+#     author_path = os.path.join(directory_name, author)
+#     if os.path.isdir(author_path):
+#         for file in os.listdir(author_path):
+#             if file.endswith(".wav"):
+#                 file_path = os.path.join(author_path, file)
+#                 try:
+#                     audio, sr = librosa.load(file_path, sr=SAMPLE_RATE)
+#                     mfcc = librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=N_MFCC)
+#                     mfcc_lengths.append(mfcc.shape[1])  # liczba ramek czasowych
+#                 except Exception as e:
+#                     print(f"Error processing {file_path}: {e}")
+
+# MAX_LEN = max(mfcc_lengths)
+# print(f"Calculated MAX_LEN: {MAX_LEN}")
+
+MAX_LEN = 130
 
 # 1. Wyciąganie cech MFCC z pliku audio
 def extract_features(file_path):
@@ -54,6 +78,7 @@ for author in os.listdir(directory_name):
             if file.endswith(".wav"):
                 file_path = os.path.join(author_path, file)
                 try:
+                    print(f"Processing {file_path}")
                     features = extract_features(file_path)
                     X.append(features)
                     y.append(author)
@@ -94,7 +119,7 @@ model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accur
 
 # 5. Trenujemy model na danych treningowych
 # parametry wybrane na podstawie prób i błędów
-early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+early_stop = EarlyStopping(monitor='val_loss', patience=20, restore_best_weights=True)
 history = model.fit(X_train, y_train, validation_split=0.2, epochs=50, batch_size=32, callbacks=[early_stop])
 
 # 6. Oceniamy celność modelu na danych testowych
