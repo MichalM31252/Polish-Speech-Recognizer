@@ -19,7 +19,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 
 # Tensorflow wykorzysuje Backpropagation do trenowania modelu, czyli algorytm który uczy się na podstawie błędów.
 
-directory_name = "1-500"
+directory_name = "data"
 SAMPLE_RATE = 16000
 MAX_LEN = 130  # Max length of MFCC feature vectors
 N_MFCC = 13    # Number of MFCCs
