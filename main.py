@@ -17,9 +17,11 @@ from tensorflow.keras.callbacks import EarlyStopping
 # 5. Trenujemy model na danych treningowych z wybranego folderu. (1 zestaw danych)
 # 6. Oceniamy celność modelu na danych testowych. (porównanie tego co uważa model z tym jak jest naprawde)
 
+# Tensorflow wykorzysuje Backpropagation do trenowania modelu, czyli algorytm który uczy się na podstawie błędów.
+
 directory_name = "1-500"
 SAMPLE_RATE = 16000
-MAX_LEN = 130  # Max length of MFCC feature vectors (adjust based on dataset)
+MAX_LEN = 130  # Max length of MFCC feature vectors
 N_MFCC = 13    # Number of MFCCs
 
 # 1. Wyciąganie cech MFCC z pliku audio
@@ -39,14 +41,12 @@ X = []
 y = []
 
 # 2. Wczytywanie danych audio z katalogu
-
 # Audio jest zapisane w formie
 # 1-500/nazwa_autora/
 # i wewnątrz folderu są pliki:
 # numer.TextGrid - opisuje czas w którym jest wypowiadane każde słowo i litera
 # numer.wav - plik audio z nagraniem
 # numer.txt - opisuje zdanie które jest wypowiadane w pliku audio
-
 for author in os.listdir(directory_name):
     author_path = os.path.join(directory_name, author)
     if os.path.isdir(author_path):
@@ -73,13 +73,11 @@ y_cat = to_categorical(y_encoded)
 # x_test - cechy audio, y_test - etykiety (poprawne odpowiedzi)
 X_train, X_test, y_train, y_test = train_test_split(X, y_cat, test_size=0.2, random_state=42)
 
-
 # 4. Tworzymy model sieci neuronowej
 # Sequential - model sekwencyjny, który składa się z warstw ułożonych jedna po drugiej
 # Flatten - spłaszcza dane wejściowe do jednego wymiaru
 # Dense - warstwa gęsta, która łączy wszystkie neurony z poprzednią warstwą
 # Dropout - warstwa, która losowo wyłącza neurony podczas treningu, aby zapobiec przeuczeniu (overfitting)
-
 model = Sequential([
     Flatten(input_shape=(MAX_LEN, N_MFCC)),
     Dense(256, activation='relu'),
