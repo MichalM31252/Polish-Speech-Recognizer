@@ -23,7 +23,7 @@ MFCC_MAX_LEN = int(AUDIO_DURATION * (SAMPLE_RATE // 512))  # roughly frames per 
 def load_data(data_dir):
     audio_data = []
     text_data = []
-    labels = []
+    labels_authors = []
     authors = os.listdir(data_dir)
 
     for author in authors:
@@ -62,16 +62,16 @@ def load_data(data_dir):
 
                 audio_data.append(mfcc)
                 text_data.append(text)
-                labels.append(author)
+                labels_authors.append(author)
 
-    return np.array(audio_data), text_data, labels
+    return np.array(audio_data), text_data, labels_authors
 
 # Load the dataset
 audio_features, text_sentences, label_names = load_data(DATA_DIR)
 
 # Encode labels
 label_encoder = LabelEncoder()
-labels = label_encoder.fit_transform(label_names)
+labels_authors = label_encoder.fit_transform(label_names)
 num_classes = len(label_encoder.classes_)
 
 # Process text
@@ -81,8 +81,8 @@ text_sequences = tokenizer.texts_to_sequences(text_sentences)
 text_padded = pad_sequences(text_sequences, maxlen=MAX_TEXT_LEN, padding='post')
 
 # Train/test split
-X_audio_train, X_audio_test, X_text_train, X_text_test, y_train, y_test = train_test_split(
-    audio_features, text_padded, labels, test_size=0.2, random_state=42, stratify=labels
+X_audio_train, X_audio_test, X_text_train, X_text_test, y_train_authors, y_test_authors = train_test_split(
+    audio_features, text_padded, labels_authors, test_size=0.2, random_state=42, stratify=labels
 )
 
 # Build the model
@@ -111,10 +111,10 @@ model.summary()
 # Train the model
 history = model.fit(
     x = {'audio_input': X_audio_train, 'text_input': X_text_train},
-    y = y_train,
+    y = y_train_authors,
     validation_data = (
         {'audio_input': X_audio_test, 'text_input': X_text_test},
-        y_test
+        y_test_authors
     ),
     epochs=20,
     batch_size=16
@@ -123,7 +123,7 @@ history = model.fit(
 # Evaluate
 test_loss, test_acc = model.evaluate(
     x = {'audio_input': X_audio_test, 'text_input': X_text_test},
-    y = y_test
+    y = y_test_authors
 )
 
 import matplotlib.pyplot as plt
