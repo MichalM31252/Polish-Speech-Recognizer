@@ -13,11 +13,56 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.utils import to_categorical
 import tensorflow as tf
 
+from tensorflow.keras.regularizers import l2
+from tensorflow.keras.callbacks import EarlyStopping
+import matplotlib.pyplot as plt
+
+import soundfile as sf
+
+def auto_sample_rate(data_dir):
+    for author in os.listdir(data_dir):
+        author_path = os.path.join(data_dir, author)
+        if os.path.isdir(author_path):
+            for file in os.listdir(author_path):
+                if file.endswith(".wav"):
+                    wav_path = os.path.join(author_path, file)
+                    with sf.SoundFile(wav_path) as f:
+                        return f.samplerate
+    return 16000  # fallback default
+
+def auto_n_mfcc(wav_path, sample_rate):
+    y, sr = librosa.load(wav_path, sr=sample_rate)
+    mfcc = librosa.feature.mfcc(y=y, sr=sr)
+    return mfcc.shape[0]  # number of coefficients
+
+def auto_max_len(data_dir, sample_rate, n_mfcc, percentile=95):
+    lengths = []
+    for author in os.listdir(data_dir):
+        author_path = os.path.join(data_dir, author)
+        if os.path.isdir(author_path):
+            for file in os.listdir(author_path):
+                if file.endswith(".wav"):
+                    wav_path = os.path.join(author_path, file)
+                    y, sr = librosa.load(wav_path, sr=sample_rate)
+                    mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=n_mfcc).T
+                    lengths.append(mfcc.shape[0])
+    return int(np.percentile(lengths, percentile)) if lengths else 130
+
+def get_first_wav_path(data_dir):
+    for author in os.listdir(data_dir):
+        author_path = os.path.join(data_dir, author)
+        if os.path.isdir(author_path):
+            for file in os.listdir(author_path):
+                if file.endswith(".wav"):
+                    return os.path.join(author_path, file)
+    return None
+
 # === CONFIG ===
 DATA_DIR = "data"
-SAMPLE_RATE = 16000
-N_MFCC = 13
-MAX_LEN = 130
+first_wav = get_first_wav_path(DATA_DIR)
+SAMPLE_RATE = auto_sample_rate(DATA_DIR)
+N_MFCC = auto_n_mfcc(first_wav, SAMPLE_RATE) if first_wav else 13
+MAX_LEN = auto_max_len(DATA_DIR, SAMPLE_RATE, N_MFCC)
 
 # === FUNCTIONS ===
 
@@ -193,7 +238,7 @@ history = model.fit(
     [X_mfcc_train, X_text_train, X_prosody_train],
     y_train,
     validation_split=0.2,
-    epochs=500,
+    epochs=100,
     batch_size=32
 )
 
