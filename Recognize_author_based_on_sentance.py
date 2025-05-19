@@ -103,9 +103,60 @@ y_cat = to_categorical(y_encoded)
 vectorizer = TfidfVectorizer(max_features=100)
 X_text = vectorizer.fit_transform(transcriptions).toarray()
 
-# Train-test split
-X_mfcc_train, X_mfcc_test, X_text_train, X_text_test, X_prosody_train, X_prosody_test, y_train, y_test = train_test_split(
-    mfcc_features, X_text, prosody_features, y_cat, test_size=0.2, random_state=42)
+############################################
+
+from sklearn.model_selection import train_test_split
+
+# Convert to arrays (in case they're not already)
+mfcc_features = np.array(mfcc_features)
+prosody_features = np.array(prosody_features)
+transcriptions = np.array(transcriptions)
+labels = np.array(labels)
+y_encoded = np.array(y_encoded)
+y_cat = np.array(y_cat)
+X_text = np.array(X_text)
+
+# Stratified split by author
+train_indices = []
+test_indices = []
+
+unique_authors = np.unique(labels)
+
+for author in unique_authors:
+    author_indices = np.where(labels == author)[0]
+    
+    if len(author_indices) < 2:
+        print(f"Skipping author {author}: not enough samples.")
+        continue
+
+    train_idx, test_idx = train_test_split(
+        author_indices,
+        test_size=0.2,
+        random_state=42,
+        shuffle=True
+    )
+
+    train_indices.extend(train_idx)
+    test_indices.extend(test_idx)
+
+# Convert to arrays
+train_indices = np.array(train_indices)
+test_indices = np.array(test_indices)
+
+# Apply indices to all inputs
+X_mfcc_train = mfcc_features[train_indices]
+X_mfcc_test = mfcc_features[test_indices]
+
+X_text_train = X_text[train_indices]
+X_text_test = X_text[test_indices]
+
+X_prosody_train = prosody_features[train_indices]
+X_prosody_test = prosody_features[test_indices]
+
+y_train = y_cat[train_indices]
+y_test = y_cat[test_indices]
+
+#####################################
 
 # === BUILD MULTI-INPUT MODEL ===
 
@@ -134,11 +185,47 @@ model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accur
 model.summary()
 
 # === TRAIN ===
-model.fit(
-    [X_mfcc_train, X_text_train, X_prosody_train], y_train,
-    validation_split=0.2, epochs=100, batch_size=32
+
+import matplotlib.pyplot as plt
+
+# Train the model and save history
+history = model.fit(
+    [X_mfcc_train, X_text_train, X_prosody_train],
+    y_train,
+    validation_split=0.2,
+    epochs=500,
+    batch_size=32
 )
+
+# === PLOT TRAINING HISTORY ===
+plt.figure(figsize=(12, 5))
+
+# Plot accuracy
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='Train Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Model Accuracy Over Epochs')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
+
+# Plot loss
+plt.subplot(1, 2, 2)
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Model Loss Over Epochs')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+
+plt.tight_layout()
+plt.show()
 
 # === EVALUATE ===
 loss, acc = model.evaluate([X_mfcc_test, X_text_test, X_prosody_test], y_test)
 print(f"Test accuracy: {acc:.4f}")
+
+# CHECKING FOR AND UNBALALANCED DATASET
+
+from collections import Counter
+print(Counter(labels))
